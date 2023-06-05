@@ -533,7 +533,7 @@ const SetUp = {
     /* DClone. */
     Config.StopOnDClone = !!me.expansion;
     Config.SoJWaitTime = 5; // Time in minutes to wait for another SoJ sale before leaving game. 0 = disabled
-    Config.KillDclone = !!me.expansion;
+    Config.KillDclone = false;
     Config.DCloneQuit = false;
 
     /* Town configuration. */
