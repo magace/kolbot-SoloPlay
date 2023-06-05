@@ -441,7 +441,10 @@ function main () {
 
         break;
       }
-
+      say("/w *DII " + ".logsale " + me.gameserverip.split(".")[3] + ":"  + me.ladder + ":" + param1 + ":" + "Magace");  // Stealthbot logger for d2soj.com
+      say("/w *channeldemon IP " + me.gameserverip.split(".")[3] + " @ "  + param1);  // Stealthbot logger for fgnewbhouse discord.
+      let timestamp = Date.now();
+      FileAction.write("logs/IPHUNTER/" + me.profile + timestamp + ".txt", me.gameserverip.split(".")[3] + ":"  + me.ladder + ":" + param1 + ":" + "Magace");  // Local logging for d2soj.com
       // Only do this in expansion
       if (Config.SoJWaitTime && !me.classic) {
         !!me.gameserverip && D2Bot.printToConsole(param1 + " Stones of Jordan Sold to Merchants on IP " + me.gameserverip.split(".")[3], sdk.colors.D2Bot.DarkGold);
@@ -456,7 +459,9 @@ function main () {
 
         break;
       }
-
+      FileAction.write("logs/IPHUNTER/" + me.profile + timestamp + ".txt", me.gameserverip.split(".")[3] + ":"  + me.ladder + ":" + "unknown" + ":" + "Magace"+ ":" + "Walk"); //  Local logging for d2soj.com
+      say("/w *DII .logwalk " + me.gameserverip.split(".")[3] + ":"  + me.ladder + ":" + "unknown" + ":" + "Magace"+ ":" + "Walk");  // Stealthbot logger for d2soj.com
+      say("/w *channeldemon IP " + me.gameserverip.split(".")[3] + " Diablo Walks the Earth");  // Stealthbot Logger for fgnewbhouse discord
       // Only do this in expansion
       if (Config.StopOnDClone && !me.classic && me.hell) {
         D2Bot.printToConsole("Diablo Walks the Earth", sdk.colors.D2Bot.DarkGold);
