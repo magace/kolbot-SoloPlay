@@ -182,6 +182,7 @@ function main () {
   };
 
   // Initialize libs - load config variables, build pickit list, attacks, containers and cubing and runeword recipes
+  Loader.runScript("iphunter"); //  Pretty sure I added this in the wrong place...  It works but when I die it always says it was during this script....
   Config.init(true);
   Pickit.init(true);
   Attack.init();
