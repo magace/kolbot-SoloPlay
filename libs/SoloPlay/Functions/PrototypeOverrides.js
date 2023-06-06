@@ -26,7 +26,10 @@ if (!Unit.prototype.hasOwnProperty("isGem")) {
   Object.defineProperty(Unit.prototype, "isGem", {
     get: function () {
       if (this.type !== sdk.unittype.Item) return false;
-      return (this.itemType >= sdk.items.type.Amethyst && this.itemType <= sdk.items.type.Skull);
+      return (
+        this.itemType >= sdk.items.type.Amethyst
+        && this.itemType <= sdk.items.type.Skull
+      );
     },
   });
 }
@@ -87,8 +90,10 @@ if (!Unit.prototype.hasOwnProperty("isBaseType")) {
   Object.defineProperty(Unit.prototype, "isBaseType", {
     get: function () {
       if (this.type !== sdk.unittype.Item) return false;
-      return [sdk.items.quality.Normal, sdk.items.quality.Superior].includes(this.quality) && !this.questItem && !this.isRuneword
-        && getBaseStat("items", this.classid, "gemsockets") > 0 && [sdk.items.type.Ring, sdk.items.type.Amulet].indexOf(this.itemType) === -1;
+      return [sdk.items.quality.Normal, sdk.items.quality.Superior].includes(this.quality)
+        && !this.questItem && !this.isRuneword
+        && getBaseStat("items", this.classid, "gemsockets") > 0
+        && [sdk.items.type.Ring, sdk.items.type.Amulet].indexOf(this.itemType) === -1;
     }
   });
 }
@@ -97,8 +102,12 @@ if (!Unit.prototype.hasOwnProperty("rawStrength")) {
   Object.defineProperty(Unit.prototype, "rawStrength", {
     get: function () {
       const lvl = this.getStat(sdk.stats.Level);
-      const rawBonus = (i) => i.getStat(sdk.stats.Strength);
-      const perLvlBonus = (i) => lvl * i.getStat(sdk.stats.PerLevelStrength) / 8;
+      const rawBonus = function (i) {
+        return i.getStat(sdk.stats.Strength);
+      };
+      const perLvlBonus = function (i) {
+        return lvl * i.getStat(sdk.stats.PerLevelStrength) / 8;
+      };
       const bonus = ~~(this.getItemsEx()
         .filter((i) => i.isEquipped || i.isEquippedCharm)
         .map((i) => rawBonus(i) + perLvlBonus(i))
@@ -112,8 +121,12 @@ if (!Unit.prototype.hasOwnProperty("rawDexterity")) {
   Object.defineProperty(Unit.prototype, "rawDexterity", {
     get: function () {
       const lvl = this.getStat(sdk.stats.Level);
-      const rawBonus = (i) => i.getStat(sdk.stats.Dexterity);
-      const perLvlBonus = (i) => lvl * i.getStat(sdk.stats.PerLevelDexterity) / 8;
+      const rawBonus = function (i) {
+        return i.getStat(sdk.stats.Dexterity);
+      };
+      const perLvlBonus = function (i) {
+        return lvl * i.getStat(sdk.stats.PerLevelDexterity) / 8;
+      };
       const bonus = ~~(this.getItemsEx()
         .filter((i) => i.isEquipped || i.isEquippedCharm)
         .map((i) => rawBonus(i) + perLvlBonus(i))
@@ -244,8 +257,10 @@ if (!Unit.prototype.hasOwnProperty("quantityPercent")) {
  * @param {number} difficulty 
  */
 Unit.prototype.getResPenalty = function (difficulty) {
-  difficulty > 2 && (difficulty = 2);
-  return me.gametype === sdk.game.gametype.Classic ? [0, 20, 50][difficulty] : [0, 40, 100][difficulty];
+  difficulty > 2 && (difficulty = sdk.difficulty.Hell);
+  return me.gametype === sdk.game.gametype.Classic
+    ? [0, 20, 50][difficulty]
+    : [0, 40, 100][difficulty];
 };
 
 Unit.prototype.getItemType = function () {
@@ -361,8 +376,9 @@ Unit.prototype.castChargedSkillEx = function (...args) {
 
     let chargedItems = [];
 
-    CharData.skillData.chargedSkills.forEach(chargeSkill => {
-      if (chargeSkill.skill === skillId) {
+    CharData.skillData.chargedSkills
+      .forEach(function (chargeSkill) {
+        if (chargeSkill.skill !== skillId) return;
         console.debug(chargeSkill);
         let item = me.getItem(-1, sdk.items.mode.Equipped, chargeSkill.gid);
         !!item && chargedItems.push({
@@ -370,16 +386,18 @@ Unit.prototype.castChargedSkillEx = function (...args) {
           level: chargeSkill.level,
           item: item
         });
-      }
-    });
+      });
 
     if (chargedItems.length === 0) {
       console.log("ÿc9CastChargedSkillÿc0 :: Don't have the charged skill (" + skillId + "), or not enough charges");
       return false;
     }
 
+    /** @type {ItemUnit} */
     let chargedItem = chargedItems
-      .sort((a, b) => a.charge.level - b.charge.level)
+      .sort(function (a, b) {
+        return b.charge.level - a.charge.level;
+      })
       .first().item;
 
     // Check if item with charges is equipped on the switch spot
@@ -398,7 +416,9 @@ Unit.prototype.castChargedSkillEx = function (...args) {
       if (charge instanceof Array) {
         // Filter out all other charged skills
         charge = charge
-          .filter(item => (item && item.skill === skillId) && !!item.charges)
+          .filter(function (item) {
+            return (item && item.skill === skillId) && !!item.charges;
+          })
           .first();
       } else {
         if (charge.skill !== skillId || !charge.charges) {
@@ -412,12 +432,15 @@ Unit.prototype.castChargedSkillEx = function (...args) {
 
     if (charge) {
       const usePacket = ([
-        sdk.skills.Valkyrie, sdk.skills.Decoy, sdk.skills.RaiseSkeleton, sdk.skills.ClayGolem,
-        sdk.skills.RaiseSkeletalMage, sdk.skills.BloodGolem, sdk.skills.Shout,
-        sdk.skills.IronGolem, sdk.skills.Revive, sdk.skills.Werewolf, sdk.skills.Werebear,
-        sdk.skills.OakSage, sdk.skills.SpiritWolf, sdk.skills.PoisonCreeper, sdk.skills.BattleOrders,
-        sdk.skills.SummonDireWolf, sdk.skills.Grizzly, sdk.skills.HeartofWolverine, sdk.skills.SpiritofBarbs,
-        sdk.skills.ShadowMaster, sdk.skills.ShadowWarrior, sdk.skills.BattleCommand,
+        sdk.skills.Teleport, sdk.skills.Valkyrie, sdk.skills.Decoy,
+        sdk.skills.RaiseSkeleton, sdk.skills.ClayGolem,
+        sdk.skills.RaiseSkeletalMage, sdk.skills.BloodGolem,
+        sdk.skills.IronGolem, sdk.skills.Revive,
+        sdk.skills.Werewolf, sdk.skills.Werebear,
+        sdk.skills.OakSage, sdk.skills.SpiritWolf, sdk.skills.PoisonCreeper,
+        sdk.skills.SummonDireWolf, sdk.skills.Grizzly,
+        sdk.skills.HeartofWolverine, sdk.skills.SpiritofBarbs,
+        sdk.skills.ShadowMaster, sdk.skills.ShadowWarrior
       ].indexOf(skillId) === -1);
 
       if (!usePacket) {
@@ -497,7 +520,7 @@ Unit.prototype.castSwitchChargedSkill = function (...args) {
     /** @type {{ charge: number, level: number, item: ItemUnit }[]} */
     let chargedItems = [];
 
-    CharData.skillData.chargedSkillsOnSwitch.forEach(chargeSkill => {
+    CharData.skillData.chargedSkillsOnSwitch.forEach(function (chargeSkill) {
       if (chargeSkill.skill === skillId) {
         console.debug(chargeSkill);
         let item = me.getItem(-1, sdk.items.mode.Equipped, chargeSkill.gid);
@@ -517,7 +540,9 @@ Unit.prototype.castSwitchChargedSkill = function (...args) {
     me.weaponswitch === 0 && me.switchWeapons(1);
 
     let chargedItem = chargedItems
-      .sort((a, b) => a.charge.level - b.charge.level)
+      .sort(function (a, b) {
+        return b.charge.level - a.charge.level;
+      })
       .first().item;
     return chargedItem.castChargedSkillEx.apply(chargedItem, args);
   }
