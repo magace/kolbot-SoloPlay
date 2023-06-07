@@ -162,8 +162,15 @@ Item.autoEquipCheck = function (item, basicCheck = false) {
          */
         const checkForBetterItem = function (item) {
           let betterItem = me.getItemsEx()
-            .filter(el => el.isInStorage && el.gid !== item.gid && el.identified && Item.getBodyLoc(el).includes(loc))
-            .sort((a, b) => NTIP.GetTier(b) - NTIP.GetTier(a))
+            .filter(function (el) {
+              return el.isInStorage
+                && el.gid !== item.gid
+                && el.identified
+                && Item.getBodyLoc(el).includes(loc);
+            })
+            .sort(function (a, b) {
+              return NTIP.GetTier(b) - NTIP.GetTier(a);
+            })
             .find(el => NTIP.GetTier(el) > tier);
           return !!betterItem;
         };
@@ -867,7 +874,13 @@ Item.removeItemsMerc = function () {
   return !!mercenary.getItem();
 };
 
-// Log kept item stats in the manager.
+/**
+ * Log kept item stats in the manager.
+ * @param {string} action 
+ * @param {ItemUnit} unit 
+ * @param {string} keptLine 
+ * @param {boolean} force 
+ */
 Item.logItem = function (action, unit, keptLine, force) {
   if (!this.useItemLog || unit === undefined || !unit || !unit.fname) return false;
   if (!Config.LogKeys && ["pk1", "pk2", "pk3"].includes(unit.code)) return false;
@@ -932,7 +945,10 @@ Item.logItem = function (action, unit, keptLine, force) {
     } while (sock.getNext());
   }
 
-  keptLine && (desc += ("\n\\xffc0Line: " + keptLine));
+  if (keptLine) {
+    keptLine.includes("[") && (keptLine = keptLine.split("[")[0].trim());
+    desc += ("\n\\xffc0Line: " + keptLine);
+  }
   desc += "$" + (unit.getFlag(sdk.items.flags.Ethereal) ? ":eth" : "");
 
   let itemObj = {
