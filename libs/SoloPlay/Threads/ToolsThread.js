@@ -100,6 +100,9 @@ function main () {
     Developer.logPerformance && Tracker.update();
     console.log("ÿc8Run duration ÿc2" + Time.format(getTickCount() - me.gamestarttime));
     stopDefault();
+    if (FileTools.exists("logs/diablogames/" + me.profile + ".txt")) {
+			FileTools.remove("logs/diablogames/" + me.profile + ".txt");
+		}		
     quit();
   };
 
@@ -308,7 +311,7 @@ function main () {
    */
   const keyEvent = function (key) {
     switch (key) {
-    case sdk.keys.PauseBreak: // pause default.dbj
+    case sdk.keys.PageUp: // pause default.dbj
       togglePause();
 
       break;
@@ -461,7 +464,7 @@ function main () {
       Precast.doPrecast(true);
 
       break;
-    case sdk.keys.NumpadSlash: // re-load default
+    case sdk.keys.PageDown: // re-load default
       console.log("ÿc8ToolsThread :: " + sdk.colors.Red + "Stopping threads and waiting 5 seconds to restart");
       stopDefault() && delay(1e3);
       load("libs/SoloPlay/Threads/Reload.js");
