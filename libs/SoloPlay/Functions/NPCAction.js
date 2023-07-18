@@ -8,6 +8,7 @@
 // ugly but should handle scope issues if I decide to add this to the core in which case I can come back and remove this
 // but won't get immeadiate issues of trying to redefine a const
 (function (NPCAction) {
+  const PotData = require("../Modules/GameData/PotData");
   /**
    * Easier shopping done at a specific npc
    * @param {string} npcName - NPC.NameOfNPC
@@ -65,10 +66,11 @@
     let [needPots, needBuffer, specialCheck] = [false, true, false];
     let col = Storage.Belt.checkColumns(beltSize);
 
-    const getNeededBuffer = () => {
+    const getNeededBuffer = function () {
       [buffer.hp, buffer.mp] = [0, 0];
       me.getItemsEx().filter(function (p) {
-        return p.isInInventory && [sdk.items.type.HealingPotion, sdk.items.type.ManaPotion].includes(p.itemType);
+        return p.isInInventory
+          && [sdk.items.type.HealingPotion, sdk.items.type.ManaPotion].includes(p.itemType);
       }).forEach(function (p) {
         switch (p.itemType) {
         case sdk.items.type.HealingPotion:
@@ -118,8 +120,23 @@
     if (me.normal && me.highestAct >= 4) {
       let pAct = Math.max(wantedHpPot, wantedMpPot);
       pAct >= 4 ? me.act < 4 && Town.goToTown(4) : pAct > me.act && Town.goToTown(pAct);
+    } else if (!me.normal && me.act === 3
+      && Town.getDistance(Town.tasks.get(me.act).Shop) > 10) {
+      // if we need to repair items as well or stack pots we should go ahead and change act
+      // unless we are already at our intended npc
+      let _needRepair = me.needRepair().length > 0;
+      let _needStack = CharData.pots.get("thawing").need() || CharData.pots.get("antidote").need();
+      let _needMerc = me.needMerc();
+      if (_needRepair || _needStack || _needMerc) {
+        Town.goToTown(me.highestAct >= 4 ? 4 : 1);
+      }
     }
 
+    console.debug(
+      "Buying potions, needPots: " + needPots
+      + " needBuffer: " + needBuffer
+      + " specialCheck: " + specialCheck
+    );
     let npc = Town.initNPC("Shop", "buyPotions");
     if (!npc) return false;
 
@@ -132,7 +149,9 @@
           let pot = npc.getItem(usePot);
           if (pot) {
             Storage.Inventory.CanFit(pot) && Packet.buyItem(pot, false);
-            pot = me.getItemsEx(usePot, sdk.items.mode.inStorage).filter(i => i.isInInventory).first();
+            pot = me.getItemsEx(usePot, sdk.items.mode.inStorage)
+              .filter(i => i.isInInventory)
+              .first();
             !!pot && Packet.placeInBelt(pot, i);
             pots.shift();
           } else {
@@ -220,11 +239,22 @@
     if (have + invoScrolls >= (me.charlvl < 12 ? 5 : 13)) return true;
     if (me.gold < 450) return false;
 
+    if (me.act === 3
+      && Town.getDistance(Town.tasks.get(me.act).Shop) > 10) {
+      // if we need to repair items as well or stack pots we should go ahead and change act
+      // unless we are already at our intended npc
+      let _needRepair = me.needRepair().length > 0;
+      let _needStack = CharData.pots.get("thawing").need() || CharData.pots.get("antidote").need();
+      let _needMerc = me.needMerc();
+      if (_needRepair || _needStack || _needMerc) {
+        Town.goToTown(me.highestAct >= 4 ? 4 : 1);
+      }
+    }
+
     let npc = Town.initNPC("Shop", "fillTome");
     if (!npc) return false;
 
     delay(500);
-
 
     if (!myTome) {
       let tome = npc.getItem(classid);
@@ -248,6 +278,7 @@
       }
     }
 
+    /** @type {ItemUnit} */
     let scroll = npc.getItem(scrollId);
     if (!scroll) return false;
     if (!myTome && !(myTome = me.getTome(classid))) return false;
@@ -268,6 +299,17 @@
         }
       } else {
         scroll.buy(true);
+
+        if (scrollId !== sdk.items.ScrollofIdentify && me.gold > 10000) {
+          // we are already in the shop, lets check if we need id scrolls too
+          let idTome = me.getTome(sdk.items.TomeofIdentify);
+          if (idTome && idTome.getStat(sdk.stats.Quantity) < 20) {
+            scroll = npc.getItem(sdk.items.ScrollofIdentify);
+            if (scroll) {
+              scroll.buy(true);
+            }
+          }
+        }
       }
     } catch (e2) {
       console.error(e2);
@@ -491,8 +533,12 @@
     // merc tier'ed items
     if (haveMerc && !lowLevelShop) {
       items = npc.getItemsEx()
-        .filter((item) => !Town.ignoreType(item.itemType) && NTIP.GetMercTier(item) > 0)
-        .sort((a, b) => NTIP.GetMercTier(b) - NTIP.GetMercTier(a))
+        .filter(function (item) {
+          return !Town.ignoreType(item.itemType) && NTIP.GetMercTier(item) > 0;
+        })
+        .sort(function (a, b) {
+          return NTIP.GetMercTier(b) - NTIP.GetMercTier(a);
+        })
         .forEach(function (item) {
           const myGold = me.gold;
           const itemCost = item.getItemCost(sdk.items.cost.ToBuy);
@@ -547,7 +593,13 @@
     if (Town.gambleIds.size === 0) return true;
 
     // avoid Alkor
-    me.act === 3 && Town.goToTown(me.accessToAct(4) ? 4 : 2);
+    if (me.act === 3
+      || (Town.getDistance(Town.tasks.get(me.act).Gamble) > 25 && me.gold < Config.GambleGoldStart * 1.5)) {
+      // avoid changing towns as its time wasting
+      wantedTasks.add("gamble");
+      return true;
+    }
+    // me.act === 3 && Town.goToTown(me.accessToAct(4) ? 4 : 2);
 
     let npc = Town.initNPC("Gamble", "gamble");
     if (!npc) return false;
@@ -619,12 +671,12 @@
     if (Town.cubeRepair()) return true;
 
     let npc;
-    let repairAction = Town.needRepair();
+    let repairAction = me.needRepair();
     force && repairAction.indexOf("repair") === -1 && repairAction.push("repair");
     if (!repairAction || !repairAction.length) return false;
 
-    for (let i = 0; i < repairAction.length; i += 1) {
-      switch (repairAction[i]) {
+    for (let action of repairAction) {
+      switch (action) {
       case "repair":
         me.act === 3 && Town.goToTown(me.accessToAct(4) ? 4 : 2);
         npc = Town.initNPC("Repair", "repair");
@@ -641,19 +693,22 @@
           .first();
 
         if (bowCheck) {
-          let quiverType = bowCheck.itemType === sdk.items.type.Crossbow ? sdk.items.Bolts : sdk.items.Arrows;
-          let onSwitch = bowCheck.isOnSwap;
-          onSwitch && me.switchWeapons(sdk.player.slot.Secondary);
+          const quiverType = bowCheck.itemType === sdk.items.type.Crossbow
+            ? sdk.items.Bolts : sdk.items.Arrows;
+          const onSwitch = bowCheck.isOnSwap;
+          try {
+            onSwitch && me.switchWeapons(sdk.player.slot.Secondary);
+            npc = Town.initNPC("Repair", "buyQuiver");
+            if (!npc) return false;
 
-          npc = Town.initNPC("Repair", "buyQuiver");
-          if (!npc) return false;
+            let myQuiver = me.getItem(quiverType, sdk.items.mode.Equipped);
+            !!myQuiver && myQuiver.sell();
 
-          let myQuiver = me.getItem(quiver, sdk.items.mode.Equipped);
-          !!myQuiver && myQuiver.sell();
-
-          let quiver = npc.getItem(quiverType);
-          !!quiver && quiver.buy();
-          onSwitch && me.switchWeapons(sdk.player.slot.Main);
+            let quiver = npc.getItem(quiverType);
+            !!quiver && quiver.buy();
+          } finally {
+            onSwitch && me.switchWeapons(sdk.player.slot.Main);
+          }
         }
 
         break;
